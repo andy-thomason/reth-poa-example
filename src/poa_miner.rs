@@ -1,13 +1,22 @@
 //! Proof of Authority Miner based on LocalMiner.
 
-use std::{collections::VecDeque, time::{Duration, UNIX_EPOCH}};
+use std::{
+    collections::VecDeque,
+    time::{Duration, UNIX_EPOCH},
+};
 
 use alloy_primitives::B256;
 use eyre::OptionExt;
-use reth_ethereum::{node::api::{BuiltPayload, ConsensusEngineHandle, EngineApiMessageVersion, PayloadAttributesBuilder, PayloadTypes}, rpc::types::engine::ForkchoiceState, storage::BlockReader};
+use reth_ethereum::{
+    node::api::{
+        BuiltPayload, ConsensusEngineHandle, EngineApiMessageVersion, PayloadAttributesBuilder,
+        PayloadTypes,
+    },
+    rpc::types::engine::ForkchoiceState,
+    storage::BlockReader,
+};
 use reth_payload_builder::{PayloadBuilderHandle, PayloadKind};
 use tracing::{error, info};
-
 
 #[derive(Debug)]
 pub struct PoaMiner<T: PayloadTypes, B> {
@@ -26,24 +35,39 @@ pub struct PoaMiner<T: PayloadTypes, B> {
 }
 
 impl<T: PayloadTypes, B> PoaMiner<T, B>
-    where
+where
     T: PayloadTypes,
     B: PayloadAttributesBuilder<<T as PayloadTypes>::PayloadAttributes>,
 {
     pub fn new(
         provider: impl BlockReader,
-        payload_attributes_builder: B, to_engine: ConsensusEngineHandle<T>, interval: u64, payload_builder: PayloadBuilderHandle<T>,
+        payload_attributes_builder: B,
+        to_engine: ConsensusEngineHandle<T>,
+        interval: u64,
+        payload_builder: PayloadBuilderHandle<T>,
     ) -> Self {
-        info!("PoaMiner: Starting POA at block {}", provider.best_block_number().unwrap());
+        info!(
+            "PoaMiner: Starting POA at block {}",
+            provider.best_block_number().unwrap()
+        );
 
-        let latest_header =
-            provider.sealed_header(provider.best_block_number().unwrap()).unwrap().unwrap();
+        let latest_header = provider
+            .sealed_header(provider.best_block_number().unwrap())
+            .unwrap()
+            .unwrap();
         let last_block_hashes = VecDeque::from([latest_header.hash()]);
         let last_timestamp = std::time::SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("cannot be earlier than UNIX_EPOCH")
             .as_secs();
-        Self { payload_attributes_builder, to_engine, interval, payload_builder, last_timestamp, last_block_hashes }
+        Self {
+            payload_attributes_builder,
+            to_engine,
+            interval,
+            payload_builder,
+            last_timestamp,
+            last_block_hashes,
+        }
     }
 
     pub async fn run(mut self) {
@@ -52,6 +76,7 @@ impl<T: PayloadTypes, B> PoaMiner<T, B>
         loop {
             tokio::select! {
                 // Wait for the interval or the pool to receive a transaction
+                // Note that this should be more like the original MiningMode.
                 _ = block_interval.tick() => {
                     if let Err(e) = self.advance().await {
                         error!(target: "engine::local", "Error advancing the chain: {:?}", e);
@@ -71,7 +96,11 @@ impl<T: PayloadTypes, B> PoaMiner<T, B>
     async fn update_forkchoice_state(&self) -> eyre::Result<()> {
         let res = self
             .to_engine
-            .fork_choice_updated(self.forkchoice_state(), None, EngineApiMessageVersion::default())
+            .fork_choice_updated(
+                self.forkchoice_state(),
+                None,
+                EngineApiMessageVersion::default(),
+            )
             .await?;
 
         if !res.is_valid() {
@@ -84,7 +113,10 @@ impl<T: PayloadTypes, B> PoaMiner<T, B>
     /// Returns current forkchoice state.
     fn forkchoice_state(&self) -> ForkchoiceState {
         ForkchoiceState {
-            head_block_hash: *self.last_block_hashes.back().expect("at least 1 block exists"),
+            head_block_hash: *self
+                .last_block_hashes
+                .back()
+                .expect("at least 1 block exists"),
             safe_block_hash: *self
                 .last_block_hashes
                 .get(self.last_block_hashes.len().saturating_sub(32))
@@ -122,15 +154,17 @@ impl<T: PayloadTypes, B> PoaMiner<T, B>
 
         let payload_id = res.payload_id.ok_or_eyre("No payload id")?;
 
-        let Some(Ok(payload)) =
-            self.payload_builder.resolve_kind(payload_id, PayloadKind::WaitForPending).await
+        let Some(Ok(payload)) = self
+            .payload_builder
+            .resolve_kind(payload_id, PayloadKind::WaitForPending)
+            .await
         else {
             eyre::bail!("No payload")
         };
 
         let block = payload.block();
 
-        let payload = T::block_to_payload(payload.block().clone());
+        let payload = T::block_to_payload(block.clone());
         let res = self.to_engine.new_payload(payload).await?;
 
         if !res.is_valid() {
@@ -147,5 +181,3 @@ impl<T: PayloadTypes, B> PoaMiner<T, B>
         Ok(())
     }
 }
-
-

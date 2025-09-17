@@ -8,13 +8,19 @@ reth-basic-payload-builder = { git = "https://github.com/paradigmxyz/reth.git" }
 reth-payload-builder = { git = "https://github.com/paradigmxyz/reth.git" }
 reth-ethereum = { git = "https://github.com/paradigmxyz/reth.git", features = ["node", "pool", "cli"] }
 reth-ethereum-payload-builder = { git = "https://github.com/paradigmxyz/reth.git" }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git" }
+reth-consensus-debug-client = { git = "https://github.com/paradigmxyz/reth.git" }
 
 alloy-eips = { version = "1.0.27", default-features = false }
 alloy-genesis = { version = "1.0.27", default-features = false }
 alloy-primitives = { version = "1.0.27", default-features = false }
+alloy-consensus = { version = "1.0.27", default-features = false }
+alloy-provider = { version = "1.0.30", features = ["reqwest"], default-features = false }
+alloy-rpc-types-eth = { version = "1.0.30" }
 tracing = { version = "0.1.0", default-features = false }
 futures-util = { version = "0.3", default-features = false }
 eyre = "0.6"
 serde_json = "1.0.143"
 tokio = { version = "1.47.1", features = ["full"] }
+clap = "4.5.47"
 
