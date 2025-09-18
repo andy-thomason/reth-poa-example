@@ -55,12 +55,10 @@ where
                         .expect("Block serialization cannot fail");
 
                     info!("json: {}", json);
-                    // let transactions = json.get("transactions").unwrap().clone();
                     let header = serde_json::from_value::<B::Header>(json.clone())
                         .expect("Header deserialization cannot fail");
-                    // let body = serde_json::from_value::<B::Body>(json)
-                    //     .expect("Body deserialization cannot fail");
-                    let body = Default::default();
+                    let body = serde_json::from_value::<B::Body>(json)
+                        .expect("Body deserialization cannot fail");
                     let pblock = B::new(header, body);
 
                     let payload = T::block_to_payload(SealedBlock::new_unhashed(pblock));
