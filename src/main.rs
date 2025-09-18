@@ -27,7 +27,13 @@ fn main() -> eyre::Result<()> {
     // // pk=0x7ecf2546356e8009833c7c193591628e98661b8b5128ce8bc6b38cd735e19873
     // println!("Suggested genesis:\n{}", serde_json::to_string_pretty(&genesis).unwrap());
 
-    Cli::<EthereumChainSpecParser, PoaExampleArgs>::parse()
+    let mut cli = Cli::<EthereumChainSpecParser, PoaExampleArgs>::parse();
+
+    if let reth_ethereum::cli::Commands::Node(node) = &mut cli.command {
+        node.network.discovery.disable_discovery = true;
+    }
+
+    cli
         .run(|builder, args| async move {
             info!(target: "reth::cli", "Launching node");
             let NodeHandle { node, node_exit_future } =

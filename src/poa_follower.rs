@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
 use futures_util::StreamExt;
-use reth_ethereum::{node::{api::{BuiltPayload, ConsensusEngineHandle, EngineApiMessageVersion, ExecutionPayload, FullNodeComponents, FullNodeTypes, NodeTypes, PayloadTypes}, builder::DebugNode}, primitives::{AlloyBlockHeader, NodePrimitives, SealedBlock}, rpc::types::engine::ForkchoiceState};
-use alloy_provider::{network::BlockResponse, Network, Provider};
+use reth_ethereum::{
+    node::{api::{BuiltPayload, ConsensusEngineHandle, EngineApiMessageVersion, ExecutionPayload, PayloadTypes}},
+    primitives::{AlloyBlockHeader, NodePrimitives, SealedBlock},
+    rpc::types::engine::ForkchoiceState,
+};
+use alloy_provider::{Network, Provider};
 use tracing::{info, warn};
 
 
