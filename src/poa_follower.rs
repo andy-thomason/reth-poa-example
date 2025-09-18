@@ -32,7 +32,7 @@ where
             Ok(sub) => sub.into_stream(),
             Err(err) => {
                 warn!(
-                    target: "consensus::debug-client",
+                    target: "poa_follower",
                     %err,
                     url=%self.producer_url,
                     "Failed to subscribe to blocks",
@@ -51,10 +51,16 @@ where
 
             match block {
                 Ok(block_response) => {
-                    let json = serde_json::to_value(block_response)
+                    // Convert block_response to JSON, renaming "uncles" to "ommers"
+                    let mut json = serde_json::to_value(block_response)
                         .expect("Block serialization cannot fail");
 
-                    info!("json: {}", json);
+                    if let serde_json::Value::Object(ref mut map) = json {
+                        if let Some(uncles) = map.remove("uncles") {
+                            map.insert("ommers".to_string(), uncles);
+                        }
+                    }
+
                     let header = serde_json::from_value::<B::Header>(json.clone())
                         .expect("Header deserialization cannot fail");
                     let body = serde_json::from_value::<B::Body>(json)
@@ -65,7 +71,6 @@ where
 
                     let hash = payload.block_hash();
                     
-                    println!("{payload:?}");
                     let _ = self.to_engine.new_payload(payload).await;
 
                     let fcu = ForkchoiceState {
@@ -79,7 +84,7 @@ where
                 }
                 Err(err) => {
                     warn!(
-                        target: "consensus::debug-client",
+                        target: "poa_follower",
                         %err,
                         url=%self.producer_url,
                         "Failed to fetch a block",
